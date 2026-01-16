@@ -1,9 +1,16 @@
+/**
+ * FRONTEND JS for No No Fake News
+ * Robust and clean implementation
+ */
+
 async function analyzeUrl() {
     const input = document.getElementById('urlInput');
+    if (!input || !(input instanceof HTMLInputElement)) return;
+    
     const url = input.value.trim();
     if (!url) return;
 
-    // UI Loading State
+    // UI Loading State Elements
     const btn = document.getElementById('analyzeBtn');
     const btnText = document.getElementById('btnText');
     const spinner = document.getElementById('btnSpinner');
@@ -11,14 +18,19 @@ async function analyzeUrl() {
     const emptyState = document.getElementById('emptyState');
     const skeletonLoader = document.getElementById('skeletonLoader');
 
-    btn.disabled = true;
-    btnText.style.display = 'none';
-    spinner.style.display = 'block';
-    btn.classList.remove('pulse');
+    // Safe UI state update
+    if (btn) {
+        if (btn instanceof HTMLButtonElement) btn.disabled = true;
+        btn.classList.remove('pulse');
+    }
+    if (btnText) btnText.style.display = 'none';
+    if (spinner) spinner.style.display = 'block';
     
     // Show Skeletons, Hide Results & Empty State
-    results.classList.add('hidden');
-    results.classList.remove('visible');
+    if (results) {
+        results.classList.add('hidden');
+        results.classList.remove('visible');
+    }
     if (emptyState) emptyState.classList.add('hidden');
     if (skeletonLoader) {
         skeletonLoader.classList.remove('hidden');
@@ -26,19 +38,26 @@ async function analyzeUrl() {
     }
 
     try {
-        const response = await fetch('/api/analyze', {
+        const apiKey = 'nnfn_dev_key';
+        const response = await fetch(`/api/analyze?api_key=${apiKey}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-API-Key': apiKey
+            },
             body: JSON.stringify({ url: url })
         });
 
         if (!response.ok) {
-            throw new Error('Analysis failed');
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('Problème d\'authentification (Clé API). Essayez de rafraîchir la page (Cmd+R).');
+            }
+            throw new Error(`Analyse échouée (Code ${response.status})`);
         }
 
         const data = await response.json();
         
-        // Hide Skeleton and Display Results
+        // Hide Skeleton
         if (skeletonLoader) {
             skeletonLoader.classList.add('hidden');
             skeletonLoader.classList.remove('visible');
@@ -48,19 +67,24 @@ async function analyzeUrl() {
         loadHistory(); 
 
     } catch (error) {
-        alert('Error: ' + error.message);
-        if (emptyState && !results.classList.contains('visible')) {
+        const msg = error instanceof Error ? error.message : String(error);
+        alert('Error: ' + msg);
+        if (emptyState && results && !results.classList.contains('visible')) {
             emptyState.classList.remove('hidden');
         }
     } finally {
-        btn.disabled = false;
-        btnText.style.display = 'block';
-        spinner.style.display = 'none';
+        if (btn) {
+            if (btn instanceof HTMLButtonElement) btn.disabled = false;
+        }
+        if (btnText) btnText.style.display = 'block';
+        if (spinner) spinner.style.display = 'none';
     }
 }
 
 function displayResults(data) {
     const results = document.getElementById('results');
+    if (!results) return;
+
     results.classList.remove('hidden');
     results.classList.add('visible');
 
@@ -76,106 +100,152 @@ function displayResults(data) {
     const container = results.querySelector('.score-circle-container');
     const progressCircle = results.querySelector('#scoreProgress');
     
-    if (container && progressCircle) {
-        const scoreColor = data.verdict.color || '#3b82f6';
+    if (container && progressCircle && container instanceof HTMLElement && progressCircle instanceof SVGElement) {
+        const scoreColor = data.verdict?.color || '#3b82f6';
         
-        // Apply color to container for CSS variables and to circle explicitly
         container.style.setProperty('--accent', scoreColor);
-        progressCircle.style.stroke = scoreColor;
+        // progressCircle is an SVGElement, it has a style property in modern browsers
+        const circleStyle = progressCircle.style;
+        circleStyle.stroke = scoreColor;
 
         // Reset animation state
-        progressCircle.style.transition = 'none';
-        progressCircle.style.strokeDashoffset = '283';
+        circleStyle.transition = 'none';
+        circleStyle.strokeDashoffset = '283';
         
         // Force reflow and start animation in next frames
         requestAnimationFrame(() => {
             progressCircle.getBoundingClientRect();
             requestAnimationFrame(() => {
-                progressCircle.style.transition = 'stroke-dashoffset 1.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                circleStyle.transition = 'stroke-dashoffset 1.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
                 const offset = 283 - (data.score / 100) * 283;
-                progressCircle.style.strokeDashoffset = offset.toString();
+                circleStyle.strokeDashoffset = offset.toString();
             });
         });
     }
 
     // Animate Number
     if (scoreVal) {
-        animateValue(scoreVal, 0, data.score, 1200);
+        animateValue(scoreVal, 0, data.score || 0, 1200);
     }
 
     // Verdict Badge
     const badge = document.getElementById('verdictBadge');
     if (badge) {
-        const color = data.verdict.color || '#3b82f6';
-        badge.textContent = data.verdict.label || data.verdict.badge || 'Analyse';
+        const color = data.verdict?.color || '#3b82f6';
+        badge.textContent = data.verdict?.label || data.verdict?.badge || 'Analyse';
         badge.style.backgroundColor = `${color}15`;
         badge.style.color = color;
         badge.style.borderColor = `${color}40`;
     }
     
-    document.getElementById('verdictMessage').textContent = data.verdict.message;
-    document.getElementById('sourceNameDisplay').textContent = data.details.source.name || 'Inconnue';
+    const verdictMsg = document.getElementById('verdictMessage');
+    if (verdictMsg) verdictMsg.textContent = data.verdict?.message || '';
+
+    // Safely access nested details
+    const det = data.details || {};
+    const src = det.source || {};
+    const ling = det.linguistic || {};
+    const prop = det.propagation || {};
+
+    const srcDisplay = document.getElementById('sourceNameDisplay');
+    if (srcDisplay) srcDisplay.textContent = src.name || 'Inconnue';
+
     const sourceLink = document.getElementById('sourceLink');
-    if (sourceLink) {
-        sourceLink.href = data.url;
+    if (sourceLink && sourceLink instanceof HTMLAnchorElement) {
+        sourceLink.href = data.url || '#';
     }
 
     // Metrics - Linguistic
-    // Emotivity: 0 bad (too emotional), 10 good (neutral). 
-    // Bar should reflect "goodness". So if 10/10, fill 100%.
-    const emotivityPct = (data.details.linguistic.emotivity / 10) * 100;
-    document.getElementById('emotivityBar').style.width = `${emotivityPct}%`;
-    document.getElementById('emotivityBar').style.backgroundColor = getColorForMetric(emotivityPct);
+    const emotivityPct = ((ling.emotivity || 0) / 10) * 100;
+    const emotivityBar = document.getElementById('emotivityBar');
+    if (emotivityBar) {
+        emotivityBar.style.width = `${emotivityPct}%`;
+        emotivityBar.style.backgroundColor = getColorForMetric(emotivityPct);
+    }
 
-    const clickbaitPct = (data.details.linguistic.clickbait / 10) * 100;
-    document.getElementById('clickbaitBar').style.width = `${clickbaitPct}%`;
-    document.getElementById('clickbaitBar').style.backgroundColor = getColorForMetric(clickbaitPct);
+    const clickbaitPct = ((ling.clickbait || 0) / 10) * 100;
+    const clickbaitBar = document.getElementById('clickbaitBar');
+    if (clickbaitBar) {
+        clickbaitBar.style.width = `${clickbaitPct}%`;
+        clickbaitBar.style.backgroundColor = getColorForMetric(clickbaitPct);
+    }
     
-    document.getElementById('sentimentLabel').textContent = data.details.linguistic.sentiment;
-    document.getElementById('clickbaitScoreDisplay').textContent = `${data.details.linguistic.clickbait}/10`;
+    const sentimentLabel = document.getElementById('sentimentLabel');
+    if (sentimentLabel) sentimentLabel.textContent = ling.sentiment || '-';
+
+    const clickbaitDisplay = document.getElementById('clickbaitScoreDisplay');
+    if (clickbaitDisplay) clickbaitDisplay.textContent = `${ling.clickbait || 0}/10`;
 
     // Metrics - Source
-    // Domain: 0-15. Author: 0-10.
-    const domainPct = (data.details.source.domain_score / 15) * 100;
-    document.getElementById('domainBar').style.width = `${domainPct}%`;
-    document.getElementById('domainBar').style.backgroundColor = getColorForMetric(domainPct);
+    const domainPct = ((src.domain_score || 0) / 15) * 100;
+    const domainBar = document.getElementById('domainBar');
+    if (domainBar) {
+        domainBar.style.width = `${domainPct}%`;
+        domainBar.style.backgroundColor = getColorForMetric(domainPct);
+    }
     
-    const authorPct = (data.details.source.author_score / 10) * 100;
-    document.getElementById('authorBar').style.width = `${authorPct}%`;
-    document.getElementById('authorBar').style.backgroundColor = getColorForMetric(authorPct);
+    const authorPct = ((src.author_score || 0) / 10) * 100;
+    const authorBar = document.getElementById('authorBar');
+    const authorName = document.getElementById('authorName');
+    
+    if (authorBar) {
+        authorBar.style.width = `${authorPct}%`;
+        authorBar.style.backgroundColor = getColorForMetric(authorPct);
+    }
+    
+    if (authorName) {
+        authorName.textContent = src.author_name || 'Non identifié';
+    }
 
-    // Metrics - Propagation (Max 20 pts)
-    const propPct = (data.details.propagation.score / 20) * 100;
-    document.getElementById('propagationBar').style.width = `${propPct}%`;
-    document.getElementById('propagationBar').style.backgroundColor = getColorForMetric(propPct);
-    document.getElementById('propagationCountDisplay').textContent = `${data.details.propagation.count} articles trouvés`;
+    // Metrics - Propagation
+    const propPct = ((prop.score || 0) / 20) * 100;
+    const propBar = document.getElementById('propagationBar');
+    if (propBar) {
+        propBar.style.width = `${propPct}%`;
+        propBar.style.backgroundColor = getColorForMetric(propPct);
+    }
+    const propCountDisplay = document.getElementById('propagationCountDisplay');
+    if (propCountDisplay) propCountDisplay.textContent = `${prop.count || 0} articles trouvés`;
     
     const propSources = document.getElementById('propagationSources');
-    if (data.details.propagation.sources && data.details.propagation.sources.length > 0) {
-        propSources.innerHTML = '<h4>Relayé par :</h4><ul>' + 
-            data.details.propagation.sources.map(s => `<li>${s}</li>`).join('') + 
-            '</ul>';
-    } else {
-        propSources.innerHTML = '<p class="loading-text">Aucune autre source majeure détectée par NewsAPI.</p>';
+    if (propSources) {
+        if (prop.sources && prop.sources.length > 0) {
+            propSources.innerHTML = prop.sources.map((/** @type {any} */ s) => {
+                const name = typeof s === 'string' ? s : (s.name || 'Source');
+                const date = (s.date ? new Date(s.date).toLocaleDateString() : '');
+                return `
+                    <div class="prop-source-item">
+                        <span class="prop-source-name">${name}</span>
+                        <span class="prop-source-date">${date}</span>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            propSources.innerHTML = '<p class="small-text">Aucune propagation détectée hors source originale.</p>';
+        }
     }
 
     // Entities (NLP)
     const entitiesList = document.getElementById('entitiesList');
-    if (data.entities && data.entities.length > 0) {
-        // Filter unique entities to avoid duplicates
-        const uniqueEntities = Array.from(new Set(data.entities.map(e => `${e.text}|${e.label}`)))
-            .map(s => {
-                const [text, label] = s.split('|');
-                return { text, label };
+    if (entitiesList) {
+        const entities = data.entities || [];
+        if (entities.length > 0) {
+            const seen = new Set();
+            const unique = entities.filter((/** @type {any} */ e) => {
+                const key = `${e.text}|${e.label}`.toLowerCase();
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
             });
 
-        entitiesList.innerHTML = uniqueEntities.map(ent => `
-            <span class="entity-tag ${ent.label.toLowerCase()}" title="${ent.label}">
-                ${ent.text}
-            </span>
-        `).join('');
-    } else {
-        entitiesList.innerHTML = '<p class="loading-text">Aucun sujet spécifique identifié.</p>';
+            entitiesList.innerHTML = unique.map((/** @type {any} */ e) => `
+                <span class="entity-tag ${e.label?.toLowerCase() || 'misc'}" title="${e.label || ''}">
+                    ${e.text}
+                </span>
+            `).join('');
+        } else {
+            entitiesList.innerHTML = '<p class="small-text">Aucun sujet spécifique identifié.</p>';
+        }
     }
 }
 
@@ -187,93 +257,145 @@ function getColorForMetric(pct) {
 
 function animateValue(obj, start, end, duration) {
     let startTimestamp = null;
-    const step = (timestamp) => {
-        if (!startTimestamp) startTimestamp = timestamp;
-        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        obj.innerHTML = Math.floor(progress * (end - start) + start);
-        if (progress < 1) {
-            window.requestAnimationFrame(step);
-        }
-    };
+/**
+ * @param {number} timestamp
+ */
+const step = (timestamp) => {
+    if (!startTimestamp) startTimestamp = timestamp;
+    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+    obj.innerHTML = Math.floor(progress * (end - start) + start).toString();
+    if (progress < 1) {
+        window.requestAnimationFrame(step);
+    }
+};
     window.requestAnimationFrame(step);
 }
 
 async function loadHistory() {
-    console.log("Loading history...");
     try {
-        const response = await fetch('/api/history');
+        const apiKey = 'nnfn_dev_key';
+        const response = await fetch(`/api/history?api_key=${apiKey}`, {
+            headers: { 'X-API-Key': apiKey }
+        });
         if (!response.ok) throw new Error('Failed to fetch history');
         const data = await response.json();
-        console.log("History data received:", data);
         displayHistory(data);
     } catch (error) {
         console.error('Error loading history:', error);
         const list = document.getElementById('historyList');
-        if (list) list.innerHTML = `<div class="loading-text" style="color: var(--score-red)">Erreur de chargement de l'historique : ${error.message}</div>`;
+        const msg = error instanceof Error ? error.message : String(error);
+        if (list) {
+            list.innerHTML = `<div class="loading-text" style="color: var(--score-red)">Erreur de chargement de l'historique : ${msg}</div>`;
+        }
     }
 }
 
 function displayHistory(items) {
     const list = document.getElementById('historyList');
-    if (items.length === 0) {
+    if (!list) return;
+
+    if (!items || items.length === 0) {
         list.innerHTML = '<div class="loading-text">Aucune analyse pour le moment.</div>';
         return;
     }
 
-    list.innerHTML = items.map(item => `
-        <div class="history-item" onclick="loadSingleAnalysis(${item.id})">
-            <div class="history-item-header">
-                <div>
-                    <div class="item-source">${item.source_name || 'Source Inconnue'}</div>
-                    <h4>${item.title || item.url}</h4>
+    list.innerHTML = items.map(item => {
+        const color = item.verdict?.color || getColorForMetric(item.score || 0);
+        return `
+            <div class="history-item" onclick="loadSingleAnalysis(${item.id})">
+                <div class="history-item-header">
+                    <div>
+                        <div class="item-source">${item.source_name || 'Source Inconnue'}</div>
+                        <h4>${item.title || item.url}</h4>
+                    </div>
+                    <a href="${item.url}" target="_blank" class="external-link" onclick="event.stopPropagation()" title="Ouvrir l'article original">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </a>
                 </div>
-                <a href="${item.url}" target="_blank" class="external-link" onclick="event.stopPropagation()" title="Ouvrir l'article original">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                </a>
+                <div class="h-meta">
+                    <span class="h-badge" style="color: ${color}; background: ${color}15; border: 1px solid ${color}30; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">
+                        ${item.verdict?.badge || 'Analyse'}
+                    </span>
+                    <span class="h-score" style="color: ${color}">
+                        ${item.score}/100
+                    </span>
+                </div>
             </div>
-            <div class="h-meta">
-                <span class="h-badge">${item.verdict.badge}</span>
-                <span class="h-score" style="color: ${getColorForMetric(item.score)}">${item.score}/100</span>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 async function loadSingleAnalysis(id) {
     try {
-        const response = await fetch(`/api/analysis/${id}`);
+        const apiKey = 'nnfn_dev_key';
+        const response = await fetch(`/api/analysis/${id}?api_key=${apiKey}`, {
+            headers: { 'X-API-Key': apiKey }
+        });
+        if (!response.ok) throw new Error('Failed to fetch analysis details');
         const data = await response.json();
         displayResults(data);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-        alert('Error loading analysis: ' + error.message);
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error('Error loading analysis:', error);
+        alert('Error loading analysis: ' + msg);
     }
 }
 
 // Bind enter key
-document.getElementById('urlInput').addEventListener('keypress', function (e) {
+const urlInput = document.getElementById('urlInput');
+if (urlInput) {
+    /**
+ * @param {KeyboardEvent} e
+ */
+urlInput.addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
         analyzeUrl();
     }
 });
 
-// Dynamic pulse for analyze button
-document.getElementById('urlInput').addEventListener('input', function(e) {
-    const btn = document.getElementById('analyzeBtn');
-    if (e.target.value.trim().length > 5) {
-        btn.classList.add('pulse');
-    } else {
-        btn.classList.remove('pulse');
+/**
+ * @param {Event} e
+ */
+urlInput.addEventListener('input', function(e) {
+    const target = e.target;
+    if (target instanceof HTMLInputElement) {
+        const btn = document.getElementById('analyzeBtn');
+        if (btn) {
+            if (target.value.trim().length > 5) {
+                btn.classList.add('pulse');
+            } else {
+                btn.classList.remove('pulse');
+            }
+        }
     }
 });
+}
 
 // Paste what's in the clipboard to the input
 function pasteFromClipboard() {
     const input = document.getElementById('urlInput');
-    navigator.clipboard.readText().then(text => {
-        if (text) input.value = text;
-    });
+    if (input && input instanceof HTMLInputElement) {
+        navigator.clipboard.readText().then(text => {
+            if (text) input.value = text;
+        }).catch(err => {
+            console.error('Failed to read clipboard:', err);
+        });
+    }
 }
 
 // Initial load
-loadHistory();
+document.addEventListener('DOMContentLoaded', () => {
+    loadHistory();
+
+    // Check for hash routing (e.g. #analysis-123)
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#analysis-')) {
+        const id = hash.replace('#analysis-', '');
+        if (id) {
+            setTimeout(() => {
+                loadSingleAnalysis(id);
+            }, 300);
+        }
+    }
+});

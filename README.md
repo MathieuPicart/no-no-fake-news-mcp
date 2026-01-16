@@ -1,54 +1,89 @@
-# 🚫 No No Fake News (NNFN) - V2.0
+# 🚫 No No Fake News (NNFN) - V3.0
 
-**No No Fake News** est un analyseur de crédibilité d'actualités ultra-moderne conçu pour évaluer de manière critique l'information en ligne. L'outil utilise l'IA pour analyser le langage, la propagation médiatique et la fiabilité des sources.
+**No No Fake News** est un écosystème d'analyse de crédibilité d'actualités conçu pour évaluer de manière critique l'information à l'ère de la désinformation. L'outil combine analyse linguistique, traçage de la propagation médiatique, fact-checking automatisé et une extension navigateur pour une protection en temps réel.
 
-## 🚀 Fonctionnalités (Version 2.0)
+---
 
-### 🧠 Analyse Intelligente
-- **Analyse Linguistique** : Détection de l'émotivité (NLTK) et de la probabilité de clickbait.
-- **Analyse NLP** : Extraction automatique des sujets, personnes et organisations citées (spaCy NER).
-- **Propagation Médiatique** : Vérification de la couverture du sujet sur d'autres médias via NewsAPI pour évaluer la viralité.
+## 🚀 Fonctionnalités (Version 3.0)
 
-### ⚙️ Performance & Data
-- **Persistance** : Sauvegarde des analyses en base de données PostgreSQL.
-- **Cache Redis** : Accélération des analyses répétées pour une réponse instantanée.
-- **Historique** : Consultation des dernières analyses avec prévisualisation rapide.
+### 🧠 Moteur d'Analyse Avancé
+- **Analyse Linguistique (NLTK)** : Détection automatique du ton émotionnel, de l'emotivité et de la probabilité de clickbait.
+- **Analyse NLP (spaCy)** : Extraction d'entités nommées (PER, ORG, GPE) pour une compréhension fine du contexte.
+- **Fact-Checking (Google API)** : Interrogation automatique des bases de données de fact-checking pour valider les affirmations.
+- **Propagation (NewsAPI)** : Scrutage du volume de mentions et de la viralité de l'information sur les dernières 24h.
+
+### 🛡️ Protection & Accessibilité
+- **Extension Navigateur (Manifest V3)** : Un popup pour analyser la crédibilité d'un article en un clic sans quitter votre lecture.
+- **Authentification Sécurisée** : Gestion de clés API privées avec Rate Limiting via Redis.
+- **Historique Intelligent** : Sauvegarde persistante (PostgreSQL) avec dédoublonnement par URL et accès direct aux rapports détaillés.
+
+### ⚙️ Performance & Robustesse
+- **Cache Redis** : Réponses instantanées pour les URLs déjà analysées.
+- **Clean Architecture** : Code JavaScript simple.
+- **Skeletons Screens** : Expérience utilisateur fluide avec placeholders animés.
+
+---
 
 ## 🛠 Stack Technique
 
-- **Backend** : FastAPI (Python 3.10+)
-- **IA/NLP** : spaCy (modèle `fr_core_news_md`), NLTK VADER
-- **Database** : PostgreSQL & Redis (Cache)
-- **Scraping** : Cloudscraper & BeautifulSoup4
-- **Frontend** : Vanilla HTML5, CSS3, JavaScript (ES6+)
+- **Backend** : FastAPI (Python 3.10+) 🐍
+- **Database** : PostgreSQL (Persistance) & Redis (Cache & Rate Limiting) 🗄️
+- **NLP / IA** : spaCy (`fr_core_news_md`), NLTK VADER 🤖
+- **Extension** : Chrome/Edge Extension Manifest V3 📦
+- **Frontend** : Vanilla HTML5/CSS3, JavaScript 💎
+
+---
 
 ## 📦 Installation & Lancement
 
-1. **Cloner le projet**
-   ```bash
-   git clone https://github.com/MathieuPicart/no-no-fake-news-mcp.git
-   cd no-no-fake-news
-   ```
+### 1. Cloner le projet
+```bash
+git clone https://github.com/MathieuPicart/no-no-fake-news-mcp.git
+cd no-no-fake-news
+```
 
-2. **Lancer avec Docker (Recommandé)**
-   ```bash
-   docker-compose up --build
-   ```
+### 2. Configuration
+Créez un fichier `.env` à la racine :
+```env
+REDIS_URL=redis://localhost:6379/0
+DATABASE_URL=postgresql://user:pass@localhost:5432/nnfn
+NEWS_API_KEY=votre_cle
+API_KEYS=nnfn_dev_key,autre_cle
+```
 
-3. **Lancement manuel**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   uvicorn app.main:app --reload
-   ```
+### 3. Lancement (Docker)
+```bash
+docker-compose up --build
+```
 
-## 🗺 Roadmap
+### 4. Lancement (Local)
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
 
-- [x] **Phase 1** : MVP (Calcul de score basique)
-- [x] **Phase 2** : Enrichissement (NLP, NewsAPI, PostgreSQL)
-- [ ] **Phase 3** : Extension Navigateur (Chrome/Firefox)
-- [ ] **Phase 4** : API Publique (Auth & Rate limiting)
+---
+
+## ⛩️ Extension Navigateur
+
+Pour installer l'extension en mode développeur :
+1. Ouvrez `chrome://extensions/`.
+2. Activez le **Mode développeur**.
+3. Cliquez sur **Charger l'extension non empaquetée**.
+4. Sélectionnez le dossier `/extension/` du projet.
+
+---
+
+## 🗺 Roadmap Accomplie
+
+- [x] **Phase 1** : MVP (Setup & Core Analysis)
+- [x] **Phase 2** : Enrichissements (NLP, Database, Cache, Fact-Check)
+- [x] **Phase 3** : Extension Navigateur & UI
+- [x] **Phase 4** : Sécurité API & Nettoyage de Code
+
+---
 
 ## 📄 Licence
 

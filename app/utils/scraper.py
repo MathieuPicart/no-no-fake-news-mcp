@@ -40,16 +40,44 @@ def extract_content(url: str) -> Optional[Content]:
             # Fallback to all paragraphs
             text = ' '.join([p.get_text() for p in soup.find_all('p')])
             
-        # Metadata extraction placeholders
-        author = None 
-        # Meta author check
-        meta_author = soup.find('meta', attrs={'name': 'author'})
-        if meta_author:
-            author = meta_author.get('content')
+        # Metadata extraction
+        author = None
+        
+        # 1. Try JSON-LD (Standard for news)
+        import json
+        ld_json = soup.find_all('script', type='application/ld+json')
+        for script in ld_json:
+            try:
+                data = json.loads(script.string)
+                if isinstance(data, dict):
+                    # Article standard
+                    if 'author' in data:
+                        a = data['author']
+                        if isinstance(a, list) and len(a) > 0:
+                            author = a[0].get('name')
+                        elif isinstance(a, dict):
+                            author = a.get('name')
+                if author: break
+            except: continue
+
+        # 2. Try OpenGraph or Meta author
+        if not author:
+            meta_author = soup.find('meta', attrs={'name': 'author'}) or \
+                          soup.find('meta', attrs={'property': 'og:article:author'}) or \
+                          soup.find('meta', attrs={'name': 'twitter:creator'})
+            if meta_author:
+                author = meta_author.get('content')
+
+        # 3. Try Common CSS Selectors
+        if not author:
+            author_tag = soup.select_one('.author, .byline, [rel="author"], .entry-author-name, .c-byline__item')
+            if author_tag:
+                author = author_tag.get_text(strip=True)
             
         date = None
         # Meta date check
-        meta_date = soup.find('meta', attrs={'property': 'article:published_time'})
+        meta_date = soup.find('meta', attrs={'property': 'article:published_time'}) or \
+                    soup.find('meta', attrs={'name': 'pubdate'})
         if meta_date:
             date = meta_date.get('content')
 

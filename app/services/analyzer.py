@@ -85,6 +85,7 @@ class NewsAnalyzer:
                 },
                 "source": {
                     "name": source_result.domain_name,
+                    "author_name": source_result.author_name,
                     "score": source_points,
                     "domain_score": source_result.domain_score,
                     "author_score": source_result.author_score

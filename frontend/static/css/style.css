@@ -624,3 +624,10 @@ footer {
     color: var(--text-secondary);
     font-style: italic;
 }
+
+.author-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    font-weight: 500;
+}

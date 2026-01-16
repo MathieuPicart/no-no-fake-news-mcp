@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # Scraping
     USER_AGENT: str = "No-No-Fake-News-Bot/0.1 (+https://nonnofakenews.com/about)"
     REQUEST_TIMEOUT: int = 10
+    
+    # Security & API
+    API_KEYS: str = "nnfn_dev_key" # Comma separated list of valid API keys
+    RATE_LIMIT_PER_MINUTE: int = 5
 
     class Config:
         env_file = ".env"
