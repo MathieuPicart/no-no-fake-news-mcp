@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+redis
+celery
+beautifulsoup4
+requests
+spacy
+nltk
+pydantic
+pydantic-settings
+python-dotenv
+jinja2
+cloudscraper
+spacy

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>No No Fake News - Detector</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="logo-icon">🚫</span> No No Fake News
+            </div>
+        </header>
+
+        <main class="container">
+            <section class="search-section">
+                <h1>No No Fake News</h1>
+                <p class="subtitle">Analyse des articles pour identifier les clickbait, les biais et la fiabilité des
+                    sources.</p>
+
+                <div class="search-container">
+                    <button id="pasteFromClipboardBtn" class="paste-btn" onclick="pasteFromClipboard()"
+                        title="Coller le lien">
+                        <span id="pasteBtnIcon">
+                            <svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16"
+                                fill="currentColor">
+                                <path
+                                    d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z">
+                                </path>
+                                <path
+                                    d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z">
+                                </path>
+                            </svg>
+                        </span>
+                    </button>
+                    <input type="url" id="urlInput" placeholder="Coller l'URL de l'article ici..." required>
+                    <button id="analyzeBtn" class="btn-icon" onclick="analyzeUrl()">
+                        <span id="btnText">Analyser</span>
+                        <div class="spinner" id="btnSpinner"></div>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Empty State (Initial View) -->
+            <div id="emptyState" class="empty-state">
+                <div class="empty-state-icon">🛡️</div>
+                <h2>Prêt à débusquer les Fake News ?</h2>
+                <p>Collez une URL pour lancer une analyse par Intelligence Artificielle.</p>
+            </div>
+
+            <!-- Skeleton Loader (Hidden by default) -->
+            <div id="skeletonLoader" class="results-container hidden">
+                <div class="score-card">
+                    <div class="skeleton-circle skeleton"></div>
+                    <div class="verdict">
+                        <div class="skeleton-text skeleton" style="width: 120px;"></div>
+                        <div class="skeleton-title skeleton"></div>
+                        <div class="skeleton-text skeleton" style="width: 200px;"></div>
+                    </div>
+                </div>
+                <div class="details-grid">
+                    <div class="detail-card skeleton-bar skeleton"></div>
+                    <div class="detail-card skeleton-bar skeleton"></div>
+                    <div class="detail-card skeleton-bar skeleton"></div>
+                    <div class="detail-card skeleton-bar skeleton"></div>
+                </div>
+            </div>
+
+            <section id="results" class="results-container hidden">
+                <div class="score-card">
+                    <div class="score-circle-container">
+                        <svg class="score-svg" viewBox="0 0 100 100">
+                            <circle class="score-bg" cx="50" cy="50" r="45"></circle>
+                            <circle class="score-progress" id="scoreProgress" cx="50" cy="50" r="45"></circle>
+                        </svg>
+                        <div class="score-content" id="scoreCircle">
+                            <span id="scoreValue">0</span>
+                            <span class="score-label">Trust Score</span>
+                        </div>
+                    </div>
+                    <div class="verdict">
+                        <div class="source-info">
+                            Source : <span id="sourceNameDisplay">-</span>
+                            <a href="#" id="sourceLink" target="_blank" class="external-link"
+                                title="Lire l'article original">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                    <polyline points="15 3 21 3 21 9"></polyline>
+                                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                                </svg>
+                            </a>
+                        </div>
+                        <div id="verdictBadge" class="badge"></div>
+                        <p id="verdictMessage"></p>
+                    </div>
+                </div>
+
+                <div class="details-grid">
+                    <div class="card detail-card">
+                        <div class="title-with-info">
+                            <h3>Propagation Média</h3>
+                            <span class="info-icon"
+                                data-tooltip="Analyse la présence et la diffusion de l'information sur d'autres médias via NewsAPI.">?</span>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-info">
+                                <span>Couverture NewsAPI</span>
+                                <span id="propagationCountDisplay">0 articles</span>
+                            </div>
+                            <div class="progress-bg">
+                                <div id="propagationBar" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="propagation-list" id="propagationSources">
+                            <!-- Sources will be listed here -->
+                        </div>
+                    </div>
+                    <div class="card detail-card">
+                        <div class="title-with-info">
+                            <h3>Sujets Détectés (NLP)</h3>
+                            <span class="info-icon"
+                                data-tooltip="Traitement du Langage Naturel : Identification automatique des personnes, organisations et lieux cités.">?</span>
+                        </div>
+                        <div id="entitiesList" class="entities-tags">
+                            <!-- Entities will be here -->
+                            <p class="loading-text">Analyse en cours...</p>
+                        </div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="title-with-info">
+                            <h3>Analyse linguistique</h3>
+                            <span class="info-icon"
+                                data-tooltip="Examen du ton (émotivité), du style (clickbait) et du sentiment global du texte.">?</span>
+                        </div>
+                        <div class="metric">
+                            <label class="title-with-info">
+                                Emotivité
+                                <span class="info-icon"
+                                    data-tooltip="Mesure l'utilisation de mots à forte charge émotionnelle pour influencer le lecteur.">?</span>
+                            </label>
+                            <div class="progress-bar">
+                                <div class="fill" id="emotivityBar"></div>
+                            </div>
+                        </div>
+                        <div class="metric">
+                            <label class="title-with-info">
+                                Clickbait Probabilité
+                                <span class="info-icon"
+                                    data-tooltip="Probabilité que le titre soit conçu uniquement pour générer des clics.">?</span>
+                            </label>
+                            <div class="progress-bar">
+                                <div class="fill" id="clickbaitBar"></div>
+                            </div>
+                        </div>
+                        <div class="metric-text title-with-info">
+                            Sentiment: <span id="sentimentLabel">-</span>
+                            <span class="info-icon"
+                                data-tooltip="Analyse du sentiment global : Positive (positif), Neutral (neutre) ou Negative (négatif).">?</span>
+                        </div>
+                        <div class="metric-text title-with-info">
+                            Score titre: <span id="clickbaitScoreDisplay">-</span>
+                            <span class="info-icon"
+                                data-tooltip="Score de fiabilité du titre (sur 10) basé sur l'absence d'éléments clickbait.">?</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="title-with-info">
+                            <h3>Fiabilité de la source</h3>
+                            <span class="info-icon"
+                                data-tooltip="Évaluation de la réputation historique du domaine et de l'identification de l'auteur.">?</span>
+                        </div>
+                        <div class="metric">
+                            <label>Reputation du domaine</label>
+                            <div class="progress-bar">
+                                <div class="fill" id="domainBar"></div>
+                            </div>
+                        </div>
+                        <div class="metric">
+                            <label>Verification de l'auteur</label>
+                            <div class="progress-bar">
+                                <div class="fill" id="authorBar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="history" class="history-section">
+                <h2>Dernières Analyses</h2>
+                <div id="historyList" class="history-grid">
+                    <!-- History items will be injected here -->
+                    <div class="loading-text">Chargement de l'historique...</div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 No No Fake News. <span class="disclaimer">Outil éducatif. Ne garantit pas la vérité.</span>
+            </p>
+        </footer>
+    </div>
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>
