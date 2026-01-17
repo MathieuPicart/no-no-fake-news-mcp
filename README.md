@@ -43,12 +43,12 @@ cd no-no-fake-news
 ```
 
 ### 2. Configuration
-Créez un fichier `.env` à la racine :
+Créez un fichier `.env` à la racine. Vous pouvez utiliser le fichier `.env.example` comme modèle.
+
+#### API_KEYS
+L'accès aux endpoints de l'API est protégé par une authentification par clé API. Vous pouvez spécifier plusieurs clés API séparées par des virgules. Que vous devrez fournir dans le header de votre requête.
 ```env
-REDIS_URL=redis://localhost:6379/0
-DATABASE_URL=postgresql://user:pass@localhost:5432/nnfn
-NEWS_API_KEY=votre_cle
-API_KEYS=nnfn_dev_key,autre_cle
+API_KEYS=ma_cle_1,ma_cle_2
 ```
 
 ### 3. Lancement (Docker)
